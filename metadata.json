@@ -1,0 +1,7 @@
+{
+  "name": "Speech Emotion Recognition System",
+  "description": "An intelligent AI system that detects human emotions from speech audio using deep learning and signal processing.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile information",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Firebase Auth UID" },
+        "name": { "type": "string", "description": "Full name of the user" },
+        "email": { "type": "string", "format": "email", "description": "Email address" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Account creation timestamp" }
+      },
+      "required": ["userId", "name", "email", "createdAt"]
+    },
+    "Prediction": {
+      "title": "Prediction",
+      "description": "Speech emotion prediction result",
+      "type": "object",
+      "properties": {
+        "predictionId": { "type": "string", "description": "Unique ID for the prediction" },
+        "userId": { "type": "string", "description": "ID of the user who made the prediction" },
+        "audioUrl": { "type": "string", "description": "URL of the uploaded audio (if stored)" },
+        "predictedEmotion": { "type": "string", "enum": ["happy", "angry", "sad", "neutral", "fear", "surprise"], "description": "The detected emotion" },
+        "confidenceScore": { "type": "number", "description": "Confidence level (0-1)" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp of the prediction" }
+      },
+      "required": ["predictionId", "userId", "predictedEmotion", "confidenceScore", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profile documents"
+    },
+    "/predictions/{predictionId}": {
+      "schema": "Prediction",
+      "description": "Emotion prediction history"
+    }
+  }
+}

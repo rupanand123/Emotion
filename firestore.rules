@@ -1,0 +1,86 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: userId (Auth UID)
+    // Fields:
+    //   - userId: string (required)
+    //   - name: string (required, 1-100 chars)
+    //   - email: string (required, email format)
+    //   - createdAt: timestamp (required)
+    //
+    // Collection: predictions
+    // Document ID: predictionId (Auto-generated)
+    // Fields:
+    //   - predictionId: string (required)
+    //   - userId: string (required)
+    //   - audioUrl: string (optional)
+    //   - predictedEmotion: string (required, enum)
+    //   - confidenceScore: number (required, 0-1)
+    //   - createdAt: timestamp (required)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidUser(data) {
+      return hasOnlyAllowedFields(['userId', 'name', 'email', 'createdAt']) &&
+             data.userId == request.auth.uid &&
+             data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+             isValidEmail(data.email) &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidPrediction(data) {
+      return hasOnlyAllowedFields(['predictionId', 'userId', 'audioUrl', 'predictedEmotion', 'confidenceScore', 'createdAt']) &&
+             data.userId == request.auth.uid &&
+             data.predictedEmotion in ['happy', 'angry', 'sad', 'neutral', 'fear', 'surprise'] &&
+             data.confidenceScore is number && data.confidenceScore >= 0 && data.confidenceScore <= 1 &&
+             data.createdAt is timestamp;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidUser(request.resource.data);
+      allow update: if isOwner(userId) && isValidUser(request.resource.data) && 
+                      request.resource.data.createdAt == resource.data.createdAt;
+    }
+
+    match /predictions/{predictionId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() && isValidPrediction(request.resource.data);
+      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+  }
+}
